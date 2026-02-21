@@ -1,0 +1,321 @@
+```html
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<title>Step2Master | Master Step 2 CK. Five Questions a Day.</title>
+
+<script src="https://cdn.tailwindcss.com"></script>
+
+<style>
+body {
+font-family: Georgia, "Times New Roman", serif;
+}
+</style>
+
+</head>
+
+<body class="bg-gray-100 text-gray-900">
+
+<!-- HEADER -->
+
+<header class="bg-white border-b">
+<div class="max-w-5xl mx-auto flex justify-between items-center p-4">
+
+<h1 class="text-lg font-semibold">
+Step2Master
+</h1>
+
+<span class="text-sm text-gray-500">
+Master Step 2 CK. Five Questions a Day.
+</span>
+
+</div>
+</header>
+
+
+<!-- DASHBOARD -->
+
+<main id="dashboard" class="page max-w-4xl mx-auto mt-10 bg-white border p-6">
+
+<h2 class="font-semibold mb-6">Dashboard</h2>
+
+<div class="grid grid-cols-3 gap-6 mb-6">
+
+<div>
+<p class="text-sm text-gray-500">Accuracy</p>
+<p id="accuracy" class="text-2xl font-semibold">0%</p>
+</div>
+
+<div>
+<p class="text-sm text-gray-500">Completed Today</p>
+<p id="completed" class="text-2xl font-semibold">0</p>
+</div>
+
+<div>
+<p class="text-sm text-gray-500">Daily Goal</p>
+<p class="text-2xl font-semibold">5</p>
+</div>
+
+</div>
+
+<button onclick="startQuestions()"
+class="bg-black text-white px-6 py-2">
+Start Today's Questions
+</button>
+
+</main>
+
+
+<!-- QUESTION PAGE -->
+
+<main id="question" class="page hidden max-w-4xl mx-auto mt-10 bg-white border p-6">
+
+<p id="qNumber" class="text-sm text-gray-500 mb-4"></p>
+
+<p id="questionText" class="mb-6 leading-relaxed"></p>
+
+<div id="options"></div>
+
+<button onclick="submitAnswer()"
+class="mt-6 bg-black text-white px-6 py-2">
+Submit Answer
+</button>
+
+</main>
+
+
+<!-- RESULT PAGE -->
+
+<main id="result" class="page hidden max-w-4xl mx-auto mt-10 bg-white border p-6">
+
+<p class="font-semibold mb-2">
+Correct Answer:
+<span id="correctAnswer"></span>
+</p>
+
+<p id="explanation" class="text-sm leading-relaxed"></p>
+
+<button onclick="nextQuestion()"
+class="mt-6 bg-black text-white px-6 py-2">
+Next Question
+</button>
+
+</main>
+
+
+<script>
+
+/* SUPABASE CONFIGURATION */
+
+const SUPABASE_URL =
+"https://igyfuwmyogxpuwvlgztp.supabase.co";
+
+const SUPABASE_KEY =
+"sb_publishable_baiIw_jdqrpUSg4cJop0PQ_4DsUw9L_";
+
+
+let questions = [];
+let currentQuestion = 0;
+let correctCount = 0;
+
+
+/* LOAD QUESTIONS FROM DATABASE */
+
+async function loadQuestions()
+{
+
+const response = await fetch(
+`${SUPABASE_URL}/rest/v1/questions?select=*`,
+{
+headers:
+{
+apikey: SUPABASE_KEY,
+Authorization: `Bearer ${SUPABASE_KEY}`
+}
+});
+
+let data = await response.json();
+
+questions =
+data.sort(() => 0.5 - Math.random()).slice(0,5);
+
+}
+
+
+/* START SESSION */
+
+async function startQuestions()
+{
+
+await loadQuestions();
+
+currentQuestion = 0;
+correctCount = 0;
+
+loadQuestion();
+
+showPage("question");
+
+}
+
+
+/* LOAD QUESTION */
+
+function loadQuestion()
+{
+
+let q = questions[currentQuestion];
+
+document.getElementById("qNumber").innerText =
+`Question ${currentQuestion+1} of 5`;
+
+document.getElementById("questionText").innerText =
+q.question;
+
+let html = "";
+
+html += createOption(q.option_a, 0);
+html += createOption(q.option_b, 1);
+html += createOption(q.option_c, 2);
+html += createOption(q.option_d, 3);
+
+document.getElementById("options").innerHTML = html;
+
+}
+
+
+/* CREATE OPTION */
+
+function createOption(text, index)
+{
+
+return `
+<label class="block border p-3 mb-2 cursor-pointer hover:bg-gray-50">
+
+<input type="radio" name="option" value="${index}" class="mr-2">
+
+${text}
+
+</label>
+`;
+
+}
+
+
+/* SUBMIT ANSWER */
+
+function submitAnswer()
+{
+
+let selected =
+document.querySelector('input[name="option"]:checked');
+
+if(!selected)
+{
+alert("Please select an answer.");
+return;
+}
+
+let answer = parseInt(selected.value);
+
+let correct =
+questions[currentQuestion].correct_option;
+
+if(answer === correct)
+correctCount++;
+
+let correctText =
+questions[currentQuestion][
+`option_${["a","b","c","d"][correct]}`
+];
+
+document.getElementById("correctAnswer").innerText =
+correctText;
+
+document.getElementById("explanation").innerText =
+questions[currentQuestion].explanation;
+
+showPage("result");
+
+}
+
+
+/* NEXT QUESTION */
+
+function nextQuestion()
+{
+
+currentQuestion++;
+
+if(currentQuestion >= questions.length)
+{
+finishSession();
+return;
+}
+
+loadQuestion();
+
+showPage("question");
+
+}
+
+
+/* FINISH SESSION */
+
+function finishSession()
+{
+
+let accuracy =
+Math.round((correctCount / 5) * 100);
+
+localStorage.setItem("accuracy", accuracy);
+
+localStorage.setItem("completed", 5);
+
+updateDashboard();
+
+showPage("dashboard");
+
+}
+
+
+/* UPDATE DASHBOARD */
+
+function updateDashboard()
+{
+
+document.getElementById("accuracy").innerText =
+(localStorage.getItem("accuracy") || 0) + "%";
+
+document.getElementById("completed").innerText =
+(localStorage.getItem("completed") || 0);
+
+}
+
+
+/* NAVIGATION */
+
+function showPage(page)
+{
+
+document.querySelectorAll(".page")
+.forEach(p => p.classList.add("hidden"));
+
+document.getElementById(page)
+.classList.remove("hidden");
+
+}
+
+
+/* INIT */
+
+updateDashboard();
+
+</script>
+
+</body>
+</html>
+```
